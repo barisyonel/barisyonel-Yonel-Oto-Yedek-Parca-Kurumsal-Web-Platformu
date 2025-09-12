@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- Ana Sayfa -->
+  <url>
+    <loc>https://yonelotoyedekparca.com/</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://yonelotoyedekparca.com/" />
+  </url>
+
+  <!-- Ürünler Sayfası -->
+  <url>
+    <loc>https://yonelotoyedekparca.com/products</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/products" />
+  </url>
+
+  <!-- Blog Sayfası -->
+  <url>
+    <loc>https://yonelotoyedekparca.com/blog</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/blog" />
+  </url>
+
+  <!-- Hakkımızda -->
+  <url>
+    <loc>https://yonelotoyedekparca.com/about</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/about" />
+  </url>
+
+  <!-- Hizmet Bölgelerimiz -->
+  <url>
+    <loc>https://yonelotoyedekparca.com/hizmet-bolgelerimiz</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/hizmet-bolgelerimiz" />
+  </url>
+
+  <!-- İletişim -->
+  <url>
+    <loc>https://yonelotoyedekparca.com/contact</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/contact" />
+  </url>
+
+  <!-- Kategori Sayfaları -->
+  <url>
+    <loc>https://yonelotoyedekparca.com/products?category=28</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/products?category=28" />
+  </url>
+
+  <url>
+    <loc>https://yonelotoyedekparca.com/products?category=16</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/products?category=16" />
+  </url>
+
+  <url>
+    <loc>https://yonelotoyedekparca.com/products?category=27</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/products?category=27" />
+  </url>
+
+  <url>
+    <loc>https://yonelotoyedekparca.com/products?category=29</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/products?category=29" />
+  </url>
+
+  <url>
+    <loc>https://yonelotoyedekparca.com/products?category=40</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/products?category=40" />
+  </url>
+
+  <url>
+    <loc>https://yonelotoyedekparca.com/products?category=41</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://yonelotoyedekparca.com/products?category=41" />
+  </url>
+
+</urlset> 

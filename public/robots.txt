@@ -1,0 +1,27 @@
+# Yönel Oto & Yedek Parça - Robots.txt
+# https://yonelotoyedekparca.com
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://yonelotoyedekparca.com/sitemap.xml
+
+# Crawl-delay for mobile optimization
+Crawl-delay: 1
+
+# Disallow admin areas
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+
+# Allow important pages
+Allow: /products
+Allow: /about
+Allow: /contact
+Allow: /hizmet-bolgelerimiz
+
+# Mobile specific
+User-agent: Googlebot-Mobile
+Allow: /
+Crawl-delay: 1 

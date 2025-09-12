@@ -1,0 +1,33 @@
+{
+  "name": "Yönel Oto Yedek Parça",
+  "short_name": "Yönel Oto",
+  "description": "Foton traktör yedek parçaları, Iveco Daily Eurobus yedek parçaları, Karataş traktör yedek parçaları, Ducato yedek parçaları, Mutlu akü satışı",
+  "start_url": "https://yonelotoyedekparca.com/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#a80000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["business", "shopping"],
+  "lang": "tr",
+  "dir": "ltr"
+} 

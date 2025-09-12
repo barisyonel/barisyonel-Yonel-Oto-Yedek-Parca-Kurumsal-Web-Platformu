@@ -1,0 +1,23 @@
+# HTTP to HTTPS Redirects
+http://yonelotoyedekparca.com/* https://yonelotoyedekparca.com/:splat 301!
+http://www.yonelotoyedekparca.com/* https://yonelotoyedekparca.com/:splat 301!
+
+# SEO Redirects
+/www.yonelotoyedekparca.com/* https://yonelotoyedekparca.com/:splat 301!
+
+# Old URL redirects
+/products/category/* /products?category=:splat 301!
+/products/subcategory/* /products?subCategory=:splat 301!
+
+# Language redirects
+/tr/* /:splat 301!
+/en/* /:splat 301!
+
+# Mobile optimization
+/mobile/* /:splat 301!
+
+# API redirects
+/api/* https://yonelticapi.onrender.com/api/:splat 200
+
+# SPA fallback
+/* /index.html 200
