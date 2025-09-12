@@ -12,14 +12,14 @@ const Contact = () => {
         <meta property="og:title" content="İletişim | Yönel Oto & Yedek Parça" />
         <meta property="og:description" content="Yönel Oto & Yedek Parça iletişim bilgileri. Adres, telefon, e-posta ve harita." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://yoneloto.com/contact" />
+        <meta property="og:url" content="https://yonelotoyedekparca.com/contact" />
       </Helmet>
-      <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ fontWeight: 800, mb: 4, color: 'darkred', letterSpacing: 1, fontSize: { xs: 32, md: 40 } }}>
+      <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ fontWeight: 800, mb: 4, color: 'darkred', letterSpacing: 1, fontSize: { xs: 32, md: 40 }, overflowY: 'hidden' }}>
         İletişim
       </Typography>
 
       <Grid container spacing={4} sx={{ mt: 2, mb: 4 }}>
-        <Grid item xs={12} md={5} sx={{ mx: 'auto' }}>
+        <Grid xs={12} md={5} sx={{ mx: 'auto' }}>
           <Paper elevation={3} sx={{ p: { xs: 3, md: 4 }, borderRadius: 3, height: '100%' }}>
             <Typography variant="h5" gutterBottom fontWeight={700} sx={{ color: 'darkred' }}>
               İletişim Bilgileri

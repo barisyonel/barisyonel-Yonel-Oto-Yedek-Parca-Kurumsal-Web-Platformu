@@ -1,11 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
   Grid,
-  Card,
-  CardContent,
-  CardMedia,
   TextField,
   MenuItem,
   Box,
@@ -18,405 +15,813 @@ import {
   Fab,
   Drawer,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemButton,
-  Collapse,
   Select,
   FormControl,
   InputLabel,
-  Button
+  Button,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import productsData from './ProductsData';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import config from '../config';
+import { apiFetch } from '../utils/api';
 import Sidebar from '../components/Sidebar';
-import { debounce } from 'lodash';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { createBrandSlug, createSubCategorySlug, createProductSlug } from '../utils/seo';
+import WhatsAppFloatButton from '../components/WhatsAppFloatButton';
+import Breadcrumb from '../components/Breadcrumb';
+
+// Slider için import'lar
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import gorselImg1 from '../assets/gorsel.png';
-import gorselImg2 from '../assets/gorsel1.png';
-import gorselImg3 from '../assets/gorsel2.png';
-import gorselImg4 from '../assets/gorsel3.png';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
-const PRODUCTS_PER_PAGE = 30;
+const API_BASE_URL = config.API_BASE_URL;
 
 const Products = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedSubCategory, setSelectedSubCategory] = useState('all');
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [openBrands, setOpenBrands] = useState({});
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [sortBy, setSortBy] = useState('name');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const brands = [
-    { value: 'all', label: 'Tüm Markalar' },
-    { value: 'karatas', label: 'Karataş Traktör' },
-    { value: 'foton', label: 'Foton Traktör' },
-    { value: 'mutlu', label: 'Mutlu Akü' },
-    { value: 'iveco', label: 'Iveco' },
-    { value: 'cnh industrial', label: 'CNH Industrial' },
-    { value: 'valeo', label: 'Valeo' },
-    { value: 'mga', label: 'MGA' },
-    { value: 'dönmez', label: 'Dönmez' },
-    { value: 'gmw', label: 'GMW' },
-    { value: 'ayd', label: 'AYD' },
-    { value: 'kraftvoll', label: 'Kraftvoll' },
-    { value: 'braxis', label: 'Braxis' },
-    { value: 'eker', label: 'Eker' },
-    { value: 'veka', label: 'Veka' },
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+
+  // Sayfa değiştirme fonksiyonu
+  const handlePageChange = (event, page) => {
+    setCurrentPage(page);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('page', page.toString());
+    setSearchParams(newParams);
+  };
+
+  // Kategori ve alt kategori sluglarını dinamik olarak oluşturmak için mapler
+  const CATEGORY_SLUGS = useMemo(() => {
+    const map = {};
+    categories.forEach(cat => {
+      map[cat.id] = createBrandSlug(cat.name);
+    });
+    return map;
+  }, [categories]);
+
+  // Kategorileri yükle
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await apiFetch(`${API_BASE_URL}/Categories`);
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data.categories || data);
+        }
+      } catch (err) {
+        console.error('Kategoriler yüklenirken hata:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // URL parametrelerini kontrol et
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    const subCategoryParam = searchParams.get('subCategory');
+    const pageParam = searchParams.get('page');
+
+    // Slug'dan ID'ye dönüşüm için kategori map'i oluştur
+    const categorySlugToIdMap = {};
+    categories.forEach(cat => {
+      categorySlugToIdMap[createBrandSlug(cat.name)] = cat.id.toString();
+    });
+
+    if (categoryParam) {
+      const categoryId = categorySlugToIdMap[categoryParam] || 'all';
+      setSelectedBrand(categoryId);
+    } else {
+      setSelectedBrand('all');
+    }
+
+    if (subCategoryParam) {
+      setSelectedSubCategory(subCategoryParam);
+    } else {
+      setSelectedSubCategory('all');
+    }
+
+    if (pageParam) {
+      setCurrentPage(parseInt(pageParam) || 1);
+    }
+  }, [searchParams, categories]);
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // URL'den kategori ve alt kategori bilgilerini al
+      const categoryParam = searchParams.get('category');
+      const subCategoryParam = searchParams.get('subCategory');
+      const page = searchParams.get('page') || 1;
+
+      // Slug'dan kategori ID'sini bul
+      let categoryId = '';
+      let subCategoryName = '';
+      
+      if (categoryParam && categories.length > 0) {
+        const foundCategory = categories.find(cat => createBrandSlug(cat.name) === categoryParam);
+        if (foundCategory) {
+          categoryId = foundCategory.id.toString();
+          
+          if (subCategoryParam && foundCategory.subCategories) {
+            const foundSubCategory = foundCategory.subCategories.find(sub => 
+              createSubCategorySlug(sub.name) === subCategoryParam
+            );
+            if (foundSubCategory) {
+              subCategoryName = foundSubCategory.name;
+            }
+          }
+        }
+      }
+
+      let url = `${API_BASE_URL}/Products?page=${page}&limit=12`;
+      if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+      if (categoryId) {
+        url += `&category=${categoryId}`;
+      }
+      if (subCategoryName && subCategoryName !== 'all') {
+        url += `&subCategory=${encodeURIComponent(subCategoryName)}`;
+      }
+
+      const response = await apiFetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      setProducts(data.products || data);
+      setTotalPages(data.totalPages || 1);
+    } catch (err) {
+      console.error('Ürünler çekilirken hata oluştu:', err);
+      setError('Ürünler yüklenemedi.');
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, searchParams, categories]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Sıralama fonksiyonu
+  const sortProducts = (products, sortBy) => {
+    if (!products || products.length === 0) return products;
+    
+    const sorted = [...products].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name, 'tr');
+        case 'name-desc':
+          return b.name.localeCompare(a.name, 'tr');
+        case 'price':
+          return (a.price || 0) - (b.price || 0);
+        case 'price-desc':
+          return (b.price || 0) - (a.price || 0);
+        default:
+          return 0;
+      }
+    });
+    
+    return sorted;
+  };
+
+  // Kategori seçildiğinde
+  const handleCategorySelect = (categoryId) => {
+    const newParams = new URLSearchParams();
+    if (categoryId !== 'all') {
+      const categorySlug = CATEGORY_SLUGS[categoryId] || categoryId;
+      newParams.set('category', categorySlug);
+    }
+    newParams.set('page', '1');
+    setSearchParams(newParams);
+    setSelectedBrand(categoryId);
+    setSelectedSubCategory('all');
+  };
+
+  // Alt kategori seçildiğinde
+  const handleSubCategorySelect = (categoryId, subCategory) => {
+    const newParams = new URLSearchParams();
+    const categorySlug = CATEGORY_SLUGS[categoryId] || categoryId;
+    newParams.set('category', categorySlug);
+    if (subCategory !== 'all') {
+      newParams.set('subCategory', createSubCategorySlug(subCategory));
+    }
+    newParams.set('page', '1');
+    setSearchParams(newParams);
+    setSelectedSubCategory(subCategory);
+  };
+
+  // Arama fonksiyonu
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    const newParams = new URLSearchParams();
+    if (query) {
+      newParams.set('search', query);
+    }
+    if (selectedBrand !== 'all') {
+      const categorySlug = CATEGORY_SLUGS[selectedBrand] || selectedBrand;
+      newParams.set('category', categorySlug);
+    }
+    if (selectedSubCategory !== 'all') {
+      newParams.set('subCategory', selectedSubCategory);
+    }
+    newParams.set('page', '1');
+    setSearchParams(newParams);
+    setCurrentPage(1);
+  };
+
+  // Arama değişikliği
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearchQuery(value);
+    
+    // Debounce için timeout
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      handleSearch(value);
+    }, 500);
+  };
+
+  // Custom arrow components
+  const PrevArrow = (props) => {
+    const { onClick } = props;
+    return (
+      <Box
+        onClick={onClick}
+        sx={{
+          position: 'absolute',
+          left: 20,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 2,
+          cursor: 'pointer',
+          color: 'white',
+          fontSize: '2rem',
+          '&:hover': {
+            opacity: 0.7
+          }
+        }}
+      >
+        <ArrowBackIosNewIcon />
+      </Box>
+    );
+  };
+
+  const NextArrow = (props) => {
+    const { onClick } = props;
+    return (
+      <Box
+        onClick={onClick}
+        sx={{
+          position: 'absolute',
+          right: 20,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 2,
+          cursor: 'pointer',
+          color: 'white',
+          fontSize: '2rem',
+          '&:hover': {
+            opacity: 0.7
+          }
+        }}
+      >
+        <ArrowForwardIosIcon />
+      </Box>
+    );
+  };
+
+  // Slider ayarları
+  const sliderSettings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 5000,
+    arrows: true,
+    prevArrow: <PrevArrow />,
+    nextArrow: <NextArrow />
+  };
+
+  // Slider görselleri
+  const sliderImages = [
+    {
+      imageUrl: '/gorsel.png',
+      title: 'Yönel Yedek Parça - Geniş Ürün Yelpazesi',
+      description: 'Foton, Iveco, Karataş traktör yedek parçaları ve Mutlu Akü ürünleri. 2000+ çeşit orijinal yedek parça.'
+    },
+    {
+      imageUrl: '/gorsel1.png',
+      title: 'Otomotiv Yedek Parçaları',
+      description: 'Fren balata, filtre, akü ve çeşitli otomotiv yedek parçaları. Kaliteli markalar, uygun fiyatlar.'
+    },
+    {
+      imageUrl: '/gorsel2.png',
+      title: 'Ağır Vasıta Yedek Parçaları',
+      description: 'Hidrolik silindir, fren kaliperi, stop lambası ve ağır vasıta yedek parçaları. Profesyonel çözümler.'
+    }
   ];
 
-  // Alt kategoriler, markaya göre
-  const subCategories = {
-    karatas: ['T4 Serisi', 'T5 Serisi', 'Karataş Parts'],
-    foton: ['FT Serisi', 'FTX Serisi', 'Lovol', 'Foton Parts', 'Lovol Parts'],
-    mutlu: ['Binek', 'Ticari', 'Aksesuar'],
-    iveco: ['Daily','Eurokargo', 'Erobus', 'Ducato', '120-14', '85-12', '65-9', '50NC'],
-    'cnh industrial': ['Disk'],
-    valeo: ['Set'],
-    mga: ['Balata'],
-    dönmez: ['Set'],
-    gmw: ['Balata'],
-    ayd: ['Balata'],
-    kraftvoll: ['Balata'],
-    braxis: ['Balata'],
-    eker: ['Balata'],
-    veka: ['Balata'],
-  };
-
-  // Debounce search
-  const debouncedSetSearch = useMemo(() => debounce((val) => setDebouncedSearch(val), 300), []);
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    debouncedSetSearch(e.target.value);
-  };
-
-  const filteredProducts = productsData.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(debouncedSearch.toLowerCase());
-    const matchesBrand = selectedBrand === 'all' || product.brand === selectedBrand;
-    const matchesSubCategory = selectedSubCategory === 'all' || product.subCategory === selectedSubCategory;
-    return matchesSearch && matchesBrand && matchesSubCategory;
-  });
-
-  // Sayfa numarasını URL'den al
-  const pageParam = parseInt(searchParams.get('page') || '1', 10);
-  const [page, setPage] = useState(pageParam);
-
-  // Sayfa değişince URL'yi güncelle
-  const handlePageChange = (event, value) => {
-    setPage(value);
-    setSearchParams({ page: value });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Gösterilecek ürünleri hesapla
-  const startIdx = (page - 1) * PRODUCTS_PER_PAGE;
-  const endIdx = startIdx + PRODUCTS_PER_PAGE;
-  const paginatedProducts = filteredProducts.slice(startIdx, endIdx);
-  const pageCount = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-
-  const handleMobileFilterToggle = () => {
-    setMobileFilterOpen(!mobileFilterOpen);
-  };
-
-  const handleBrandToggle = (brand) => {
-    setOpenBrands((prev) => ({
-      ...prev,
-      [brand]: !prev[brand]
-    }));
-  };
-
   return (
-    <Container maxWidth={false} disableGutters sx={{ mt: 6, px: { xs: 0.5, md: 2 } }}>
+    <>
       <Helmet>
-        <title>Ürünlerimiz | Yönel Oto & Yedek Parça</title>
-        <meta name="description" content="Yönel Oto & Yedek Parça ürün kataloğu. Karataş Traktör, Foton Traktör, Mutlu Akü ve Iveco yedek parçaları." />
-        <meta property="og:title" content="Ürünlerimiz | Yönel Oto & Yedek Parça" />
-        <meta property="og:description" content="Yönel Oto & Yedek Parça ürün kataloğu. Karataş Traktör, Foton Traktör, Mutlu Akü ve Iveco yedek parçaları." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://yoneloto.com/products" />
+        <title>Ürünler - Foton, Iveco, Karataş Traktör Yedek Parçaları | Yönel Oto</title>
+        <meta name="description" content="Foton, Iveco, Karataş traktör yedek parçaları ve Mutlu Akü ürünleri. 2000+ çeşit orijinal yedek parça, hızlı teslimat, Türkiye geneli kargo." />
+        <meta name="keywords" content="foton yedek parça, iveco daily yedek parça, karataş traktör parça, mutlu akü, traktör yedek parça" />
       </Helmet>
 
-      {/* Küçük Slider Alanı */}
-      <Box sx={{ width: '100%', maxWidth: '100vw', overflow: 'hidden', mb: 4 }}>
-        <Slider
-          dots={true}
-          infinite={true}
-          speed={500}
-          slidesToShow={1}
-          slidesToScroll={1}
-          autoplay={true}
-          autoplaySpeed={3500}
-          arrows={false}
-        >
-          {[0, 1, 2, 3].map((j) => (
-            <Box key={j} sx={{ width: '100%', height: { xs: 220, md: 420 }, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#e3eafc' }}>
+      <WhatsAppFloatButton />
+
+      {/* Hero Slider */}
+      <Box sx={{ mb: 4 }}>
+        <Slider {...sliderSettings}>
+          {sliderImages.map((image, index) => (
+            <Box key={index} sx={{ position: 'relative', height: '400px' }}>
               <Box
                 component="img"
-                src={
-                  j === 0 ? gorselImg1 :
-                  j === 1 ? gorselImg2 :
-                  j === 2 ? gorselImg3 :
-                  gorselImg4
-                }
-                alt={`Slider görseli ${j+1}`}
+                src={image.imageUrl || image.src}
+                alt={image.title}
                 sx={{
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  borderRadius: 3,
-                  boxShadow: 2,
-                  display: 'block',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0
                 }}
               />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                  color: 'white',
+                  p: 3,
+                  borderRadius: '0 0 8px 8px',
+                }}
+              >
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                  {image.title}
+                </Typography>
+                <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                  {image.description}
+                </Typography>
+              </Box>
             </Box>
           ))}
         </Slider>
       </Box>
 
-      {/* Mobile Filter Button */}
-      <Fab
-        color="primary"
-        aria-label="filter"
-        onClick={handleMobileFilterToggle}
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          display: { xs: 'flex', md: 'none' },
-          zIndex: 1000,
-        }}
-      >
-        <FilterListIcon />
-      </Fab>
+      <Breadcrumb />
+      
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Başlık */}
+        <Typography 
+          variant="h1" 
+          component="h1" 
+          gutterBottom 
+          align="center" 
+          sx={{ 
+            mb: 3,
+            fontWeight: 800,
+            color: 'primary.main',
+            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }
+          }}
+        >
+          Foton, Iveco, Karataş Traktör Yedek Parçaları ve Mutlu Akü
+        </Typography>
+        
+        {/* Alt başlık */}
+        <Typography 
+          variant="h2" 
+          component="h2" 
+          align="center" 
+          sx={{ 
+            mb: 4,
+            fontWeight: 600,
+            color: 'text.secondary',
+            fontSize: { xs: '1.2rem', sm: '1.4rem', md: '1.6rem' }
+          }}
+        >
+          2000+ Çeşit Orijinal Yedek Parça - Hızlı Teslimat - Türkiye Geneli Kargo
+        </Typography>
 
-      {/* WhatsApp Button (All Devices) */}
-      <Fab
-        aria-label="whatsapp"
-        href="https://wa.me/905542597273"
-        target="_blank"
-        rel="noopener noreferrer"
-        sx={{
-          position: 'fixed',
-          bottom: { xs: 88, sm: 96, md: 32 },
-          right: { xs: 16, sm: 24, md: 32 },
-          zIndex: 2000,
-          width: { xs: 48, sm: 56, md: 64 },
-          height: { xs: 48, sm: 56, md: 64 },
-          bgcolor: '#25D366',
-          color: '#fff',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          '&:hover': {
-            bgcolor: '#1DA851',
-            transform: 'scale(1.05)',
-            boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
-          },
-          transition: 'transform 0.2s, box-shadow 0.2s',
-        }}
-      >
-        <WhatsAppIcon sx={{ fontSize: { xs: 24, sm: 28, md: 32 } }} />
-      </Fab>
-
-      {/* Mobile Filter Drawer */}
-      <Drawer
-        anchor="right"
-        open={mobileFilterOpen}
-        onClose={handleMobileFilterToggle}
-        PaperProps={{
-          sx: {
-            width: { xs: '100%', sm: 400 },
-            p: 3,
-            bgcolor: '#fff',
-          },
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" fontWeight={700} color="primary.main">
-            Filtreleme
-          </Typography>
-          <IconButton onClick={handleMobileFilterToggle} color="primary">
-            <CloseIcon />
-          </IconButton>
-        </Box>
-
-        <Divider sx={{ mb: 2 }} />
-
-        <List component="nav" sx={{ width: '100%' }}>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => {
-              setSelectedBrand('all');
-              setSelectedSubCategory('all');
-            }}>
-              <ListItemText
-                primary="Tüm Markalar"
-                primaryTypographyProps={{
-                  fontWeight: 600,
-                  color: selectedBrand === 'all' ? 'primary.main' : 'text.primary'
+        {/* Arama Alanı */}
+        <Box sx={{ 
+          mb: 4, 
+          p: 3, 
+          bgcolor: '#f8f9fa', 
+          borderRadius: 3,
+          border: '1px solid #e9ecef',
+          maxWidth: '800px',
+          mx: 'auto'
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' }, 
+            gap: 2, 
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ flex: 1, maxWidth: { sm: '400px', md: '500px' } }}>
+              <TextField
+                variant="outlined"
+                size="small"
+                fullWidth
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Ürün Ara"
+                InputProps={{
+                  startAdornment: (
+                    <Box sx={{ mr: 1, color: 'text.secondary' }}>
+                      🔍
+                    </Box>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    height: { xs: '48px', sm: '52px' },
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    backgroundColor: 'white',
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: 'primary.main',
+                      borderWidth: 2,
+                    },
+                  },
                 }}
               />
-            </ListItemButton>
-          </ListItem>
-          {brands.filter(b => b.value !== 'all').map((brand) => (
-            <div key={brand.value}>
-              <ListItem disablePadding>
-                <ListItemButton onClick={() => handleBrandToggle(brand.value)}>
-                  <ListItemText
-                    primary={brand.label}
-                    primaryTypographyProps={{
-                      fontWeight: 600,
-                      color: selectedBrand === brand.value ? 'primary.main' : 'text.primary'
-                    }}
-                  />
-                  {openBrands[brand.value] ? <ExpandLess /> : <ExpandMore />}
-                </ListItemButton>
-              </ListItem>
-              <Collapse in={openBrands[brand.value]} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {(subCategories[brand.value] || []).map((sub) => (
-                    <ListItemButton
-                      key={sub}
-                      selected={selectedSubCategory === sub && selectedBrand === brand.value}
-                      onClick={() => {
-                        setSelectedBrand(brand.value);
-                        setSelectedSubCategory(sub);
-                      }}
-                      sx={{ pl: 6 }}
-                    >
-                      <ListItemText primary={sub} />
-                    </ListItemButton>
-                  ))}
-                </List>
-              </Collapse>
-            </div>
-          ))}
-        </List>
+            </Box>
+          </Box>
+        </Box>
 
-        <Box sx={{ mt: 'auto', pt: 2 }}>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            onClick={handleMobileFilterToggle}
-            sx={{ py: 1.5 }}
-          >
-            Filtreleri Uygula
-          </Button>
-        </Box>
-      </Drawer>
-
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ fontWeight: 800, mb: 1, color: 'darkred', letterSpacing: 1, fontSize: { xs: 22, md: 40 }, mt: { xs: 1, md: 0 } }}>
-          Ürünlerimiz
-        </Typography>
-        <Divider sx={{ mb: 2, maxWidth: 240, width: '100%', mx: 'auto', borderColor: 'primary.main', borderBottomWidth: 2, borderRadius: 2 }} />
-        <Box sx={{ mb: 2, width: '100%', display: 'flex', justifyContent: 'center' }}>
-          <TextField
-            variant="outlined"
-            placeholder="Ürün ara..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            sx={{ width: { xs: '100%', md: '25%' } }}
-          />
-        </Box>
-      </Box>
-      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3 }}>
-        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-          <Sidebar
-            brands={brands}
-            selectedBrand={selectedBrand}
-            setSelectedBrand={setSelectedBrand}
-            subCategories={subCategories}
-            selectedSubCategory={selectedSubCategory}
-            setSelectedSubCategory={setSelectedSubCategory}
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <div className="container-fluid">
-            <div className="row g-4">
-              {paginatedProducts.map((product) => (
-                <div className="col-6 col-md-3 d-flex" key={product.id}>
-                  <div
-                    className="card flex-fill h-100 shadow-sm"
-                    style={{ borderRadius: 20, cursor: 'pointer' }}
-                    onClick={() => navigate(`/products/${product.name.replace(/ /g, '-').toLowerCase()}`)}
-                  >
-                    <div
-                      className="d-flex align-items-center justify-content-center"
-                      style={{
-                        height: 180,
-                        background: '#f3f4f6',
-                        borderTopLeftRadius: 20,
-                        borderTopRightRadius: 20,
-                        overflow: 'hidden',
-                        position: 'relative',
-                      }}
-                    >
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="img-fluid"
-                        style={{
-                          maxHeight: '100%',
-                          maxWidth: '100%',
-                          objectFit: 'contain',
-                        }}
-                      />
-                    </div>
-                    <div className="card-body d-flex flex-column">
-                      <h5 className="card-title" style={{ fontWeight: 600, fontSize: 18 }}>
-                        {product.name}
-                      </h5>
-                      <p className="card-text text-muted" style={{ fontSize: 14 }}>
-                        {product.description}
-                      </p>
-                      <div className="mt-auto">
-                        <span className="badge bg-secondary">{product.subCategory}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {/* Son satırı doldurmak için boş kartlar */}
-              {(() => {
-                const remainder = paginatedProducts.length % 4;
-                const emptySlots = remainder === 0 ? 0 : 4 - remainder;
-                return Array.from({ length: emptySlots }).map((_, idx) => (
-                  <div className="col-6 col-md-3 d-flex" key={`empty-${idx}`} style={{ visibility: 'hidden' }}>
-                    <div className="card h-100" />
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-          {/* Pagination */}
-          {pageCount > 1 && (
-            <div className="d-flex justify-content-center mt-4">
-              <Pagination
-                count={pageCount}
-                page={page}
-                onChange={handlePageChange}
-                color="primary"
-                shape="rounded"
-                siblingCount={1}
-                boundaryCount={1}
+        {/* Aktif Filtreler */}
+        <Box sx={{ mb: 3 }}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {selectedBrand !== 'all' && (
+              <Chip
+                label={`${categories.find(cat => cat.id.toString() === selectedBrand)?.name || 'Seçili Marka'}`}
+                color="secondary"
+                onDelete={() => handleCategorySelect('all')}
+                size="small"
               />
-            </div>
-          )}
+            )}
+          </Stack>
         </Box>
-      </Box>
-    </Container>
+
+        <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+          {/* Kategoriler Sidebar */}
+          <Box sx={{ 
+            display: { xs: 'none', md: 'block' },
+            width: { md: '300px' },
+            flexShrink: 0
+          }}>
+            <Paper 
+              elevation={3} 
+              sx={{ 
+                p: 3, 
+                position: 'sticky',
+                top: '80px',
+                maxHeight: 'calc(100vh - 120px)',
+                overflowY: 'auto',
+                borderRadius: 3
+              }}
+            >
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+                Kategoriler
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Sidebar
+                categories={categories}
+                selectedBrand={selectedBrand}
+                selectedSubCategory={selectedSubCategory}
+                onBrandSelect={handleCategorySelect}
+                onSubCategorySelect={handleSubCategorySelect}
+                onSearch={handleSearch}
+                searchQuery={searchQuery}
+              />
+            </Paper>
+          </Box>
+          
+          {/* Mobile Filtrele Butonu */}
+          <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<FilterListIcon />}
+              onClick={() => setDrawerOpen(true)}
+              fullWidth
+              sx={{
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 600
+              }}
+            >
+              Filtrele ve Ara
+            </Button>
+          </Box>
+
+          {/* Mobile Drawer */}
+          <Drawer
+            anchor="left"
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            sx={{
+              '& .MuiDrawer-paper': {
+                width: { xs: '100%', sm: 400 },
+                p: 2
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" fontWeight={600}>
+                Filtrele ve Ara
+              </Typography>
+              <IconButton onClick={() => setDrawerOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <Sidebar
+              categories={categories}
+              selectedBrand={selectedBrand}
+              selectedSubCategory={selectedSubCategory}
+              onBrandSelect={(categoryId) => {
+                handleCategorySelect(categoryId);
+                setDrawerOpen(false);
+              }}
+              onSubCategorySelect={(categoryId, subCategory) => {
+                handleSubCategorySelect(categoryId, subCategory);
+                setDrawerOpen(false);
+              }}
+              onSearch={handleSearch}
+              searchQuery={searchQuery}
+            />
+          </Drawer>
+
+          {/* Ürünler Ana İçerik */}
+          <Box sx={{ flex: 1 }}>
+            {/* Sonuç sayısı ve sıralama */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              mb: 3,
+              flexWrap: 'wrap',
+              gap: 2
+            }}>
+              <Typography variant="body1" color="text.secondary">
+                {loading ? 'Yükleniyor...' : `${products.length} ürün bulundu`}
+              </Typography>
+              
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Sırala</InputLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  label="Sırala"
+                >
+                  <MenuItem value="name">İsim A-Z</MenuItem>
+                  <MenuItem value="name-desc">İsim Z-A</MenuItem>
+                  <MenuItem value="price">Fiyat (Düşük-Yüksek)</MenuItem>
+                  <MenuItem value="price-desc">Fiyat (Yüksek-Düşük)</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            {loading ? (
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                minHeight: '400px',
+                flexDirection: 'column',
+                gap: 2
+              }}>
+                <CircularProgress size={60} thickness={4} />
+                <Typography variant="body1" color="text.secondary">
+                  Ürünler yükleniyor...
+                </Typography>
+              </Box>
+            ) : products.length === 0 ? (
+              <Box sx={{ 
+                textAlign: 'center', 
+                py: 8,
+                px: 3
+              }}>
+                <Box sx={{ 
+                  fontSize: '4rem', 
+                  mb: 2,
+                  opacity: 0.3
+                }}>
+                  🔍
+                </Box>
+                <Typography variant="h5" color="text.secondary" gutterBottom>
+                  Ürün bulunamadı
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Arama kriterlerinizi değiştirerek tekrar deneyin
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {sortProducts(products, sortBy).map((product) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
+                    <Paper
+                      elevation={2}
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        borderRadius: 3,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          transform: 'translateY(-8px)',
+                          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                          '& .product-image': {
+                            transform: 'scale(1.05)'
+                          }
+                        }
+                      }}
+                      onClick={() => {
+                        const category = categories.find(cat => cat.id === product.categoryId);
+                        const categorySlug = category ? createBrandSlug(category.name) : 'yedek-parca';
+                        const subCategory = category?.subCategories?.find(sub => sub.name === product.subCategory?.name);
+                        const subCategorySlug = subCategory ? createSubCategorySlug(subCategory.name) : createSubCategorySlug(product.subCategory?.name || '');
+                        const productNameSlug = createProductSlug(product.name);
+
+                        let productUrl = `/products/${categorySlug}`;
+                        if (subCategorySlug && subCategorySlug.trim() !== '') {
+                          productUrl += `/${subCategorySlug}`;
+                        }
+                        productUrl += `/${productNameSlug}-${product.id}`;
+                        navigate(productUrl);
+                      }}
+                    >
+                      {/* Ürün Resmi */}
+                      <Box sx={{
+                        position: 'relative',
+                        height: 200,
+                        overflow: 'hidden',
+                        backgroundColor: '#f8f9fa'
+                      }}>
+                        <img
+                          className="product-image"
+                          src={(() => {
+                            const imageUrl = product.imageUrl || product.ImageUrl || product.image;
+                            if (!imageUrl) return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==';
+                            if (imageUrl.startsWith('http')) return imageUrl;
+                            return `${API_BASE_URL}/${imageUrl.replace(/^\//, '')}`;
+                          })()}
+                          alt={`${product.name} - ${product.brand || categories.find(cat => cat.id === product.categoryId)?.name || 'Yedek Parça'}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            objectPosition: 'center',
+                            transition: 'transform 0.3s ease'
+                          }}
+                          onError={(e) => {
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==';
+                          }}
+                        />
+                        
+                      </Box>
+
+                      {/* Ürün Bilgileri */}
+                      <Box sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        {/* Marka */}
+                        <Typography 
+                          variant="caption" 
+                          color="primary.main" 
+                          sx={{ 
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: 0.5,
+                            mb: 0.5
+                          }}
+                        >
+                          {product.brand || categories.find(cat => cat.id === product.categoryId)?.name || 'Yedek Parça'}
+                        </Typography>
+
+                        {/* Ürün Adı */}
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 600,
+                            fontSize: '0.95rem',
+                            lineHeight: 1.3,
+                            color: 'text.primary',
+                            mb: 1,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            minHeight: '2.4rem'
+                          }}
+                        >
+                          {product.name}
+                        </Typography>
+
+                        {/* Alt Kategori */}
+                        {product.subCategory?.name && (
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ 
+                              fontSize: '0.8rem',
+                              mb: 1
+                            }}
+                          >
+                            {product.subCategory.name}
+                          </Typography>
+                        )}
+
+                        {/* Fiyat ve Bilgi */}
+                        <Box sx={{ mt: 'auto', pt: 1 }}>
+                          <Typography 
+                            variant="body2" 
+                            color="primary.main"
+                            sx={{ 
+                              fontWeight: 600,
+                              fontSize: '0.9rem',
+                              textAlign: 'center',
+                              py: 1,
+                              px: 2,
+                              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                              borderRadius: 2,
+                              border: '1px solid rgba(25, 118, 210, 0.2)'
+                            }}
+                          >
+                            Bilgi için ulaşın
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+
+            {/* Sayfalama */}
+            {!loading && products.length > 0 && totalPages > 1 && (
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                mt: 4,
+                mb: 2
+              }}>
+                <Pagination
+                  count={totalPages}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  color="primary"
+                  size="large"
+                  showFirstButton
+                  showLastButton
+                  sx={{
+                    '& .MuiPaginationItem-root': {
+                      borderRadius: 2,
+                      fontWeight: 600
+                    }
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Container>
+    </>
   );
 };
 
