@@ -8,9 +8,17 @@ export default defineConfig({
   base: '/',
   plugins: [react()],
   server: {
-    hmr: false, // Hot Module Replacement'ı devre dışı bırak
+    port: 5173,
+    host: true,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
+      clientPort: 5173,
+    },
     watch: {
-      usePolling: false // Dosya izlemeyi devre dışı bırak
+      usePolling: true,
+      interval: 1000,
     },
     // HTTPS ayarları (development için - manuel olarak aktif edilebilir)
     // https: {

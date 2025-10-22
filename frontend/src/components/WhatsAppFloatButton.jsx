@@ -5,7 +5,7 @@ import { Fab } from '@mui/material';
 const WhatsAppFloatButton = () => (
   <Fab
     aria-label="whatsapp"
-    href="https://wa.me/05542597273"
+    href="https://wa.me/905542597273"
     target="_blank"
     rel="noopener noreferrer"
     sx={{

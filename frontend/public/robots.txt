@@ -1,5 +1,6 @@
 # Yönel Oto & Yedek Parça - Robots.txt
 # https://yonelotoyedekparca.com
+# Iveco Daily Yedek Parçaları (120-14, 85-12, 65-9, 50NC) - Foton, Karataş Traktör Parçaları
 
 User-agent: *
 Allow: /
@@ -21,7 +22,25 @@ Allow: /about
 Allow: /contact
 Allow: /hizmet-bolgelerimiz
 
+# Allow Iveco Daily specific searches
+Allow: /products?search=iveco*
+Allow: /products?search=daily*
+Allow: /products?search=120-14*
+Allow: /products?search=85-12*
+Allow: /products?search=65-9*
+Allow: /products?search=50nc*
+
 # Mobile specific
 User-agent: Googlebot-Mobile
+Allow: /
+Crawl-delay: 1
+
+# Googlebot
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# Bingbot
+User-agent: Bingbot
 Allow: /
 Crawl-delay: 1 

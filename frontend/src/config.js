@@ -5,5 +5,5 @@ const API_BASE_URL = import.meta.env.DEV
 
 export default {
   API_BASE_URL,
-  WHATSAPP_NUMBER: "905551234567", // WhatsApp numarası
+  WHATSAPP_NUMBER: "905542597273", // WhatsApp numarası (Doğru numara)
 }; 

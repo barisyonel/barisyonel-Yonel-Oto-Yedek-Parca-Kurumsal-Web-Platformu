@@ -658,7 +658,7 @@ const Home = () => {
           </Box>
           
           <Grid container spacing={4} alignItems="center" justifyContent="center" sx={{ px: { xs: 2, md: 0 } }}>
-            <Grid xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
+            <Grid item xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
               <Typography variant="h3" component="h3" sx={{ 
                 fontSize: { xs: '1.4rem', md: '1.8rem' },
                 fontWeight: 700,
@@ -721,7 +721,7 @@ const Home = () => {
           </Box>
           
           <Grid container spacing={4} alignItems="center" justifyContent="center" sx={{ px: { xs: 2, md: 0 } }}>
-            <Grid xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
+            <Grid item xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
               <Typography variant="h3" component="h3" sx={{ 
                 fontSize: { xs: '1.4rem', md: '1.8rem' },
                 fontWeight: 700,
@@ -784,7 +784,7 @@ const Home = () => {
           </Box>
           
           <Grid container spacing={4} alignItems="center" justifyContent="center" sx={{ px: { xs: 2, md: 0 } }}>
-            <Grid xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
+            <Grid item xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
               <Typography variant="h3" component="h3" sx={{ 
                 fontSize: { xs: '1.4rem', md: '1.8rem' },
                 fontWeight: 700,
@@ -857,7 +857,7 @@ const Home = () => {
           </Box>
           
           <Grid container spacing={4} alignItems="center" justifyContent="center" sx={{ px: { xs: 2, md: 0 } }}>
-            <Grid xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
+            <Grid item xs={12} md={8} sx={{ px: { xs: 1, md: 2 } }}>
               <Typography variant="h3" component="h3" sx={{ 
                 fontSize: { xs: '1.4rem', md: '1.8rem' },
                 fontWeight: 700,
@@ -972,11 +972,11 @@ const Home = () => {
       </Container>
 
       {/* Popüler Kategoriler */}
-      <Container maxWidth={false} disableGutters sx={{ py: 6, px: { xs: 2, md: 8 }, bgcolor: '#f8f9fa' }}>
-        <Typography variant="h2" component="h2" align="center" fontWeight={700} sx={{ color: 'darkred', mb: 4, fontSize: { xs: '1.8rem', md: '2.2rem' } }}>
+      <Container maxWidth={false} disableGutters sx={{ py: 6, px: { xs: 1, md: 8 }, bgcolor: '#f8f9fa' }}>
+        <Typography variant="h2" component="h2" align="center" fontWeight={700} sx={{ color: 'darkred', mb: 4, fontSize: { xs: '1.8rem', md: '2.2rem' }, px: { xs: 2, md: 0 } }}>
           Popüler Yedek Parça Kategorileri
         </Typography>
-        <Grid container spacing={3} justifyContent="center" sx={{ maxWidth: '1200px', mx: 'auto' }}>
+        <Grid container spacing={{ xs: 2, md: 3 }} justifyContent="center" sx={{ maxWidth: '1200px', mx: 'auto', px: { xs: 1, md: 0 } }}>
           {[
             { name: 'Motor Parçaları', desc: 'Motor yağı, filtre, conta ve daha fazlası', link: '/products?search=motor', icon: '🔧' },
             { name: 'Fren Sistemi', desc: 'Balata, disk, hortum ve fren parçaları', link: '/products?search=fren', icon: '🛑' },
@@ -989,12 +989,13 @@ const Home = () => {
               <Paper 
                 elevation={2}
                 sx={{ 
-                  p: 3, 
+                  p: { xs: 2, md: 3 }, 
                   height: '100%', 
                   display: 'flex', 
                   flexDirection: 'column',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
+                  borderRadius: 2,
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: 4,

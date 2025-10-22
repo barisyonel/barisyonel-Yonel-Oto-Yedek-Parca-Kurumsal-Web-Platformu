@@ -6,7 +6,8 @@ import {
   Collapse,
   Typography,
   Divider,
-  Box
+  Box,
+  IconButton
 } from '@mui/material';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -56,7 +57,9 @@ const Sidebar = ({ brands, categories, selectedBrand, selectedSubCategory, setSe
         <ListItem disablePadding>
           <ListItemButton
             selected={selectedBrand === 'all'}
-            onClick={() => setSelectedBrand('all')}
+            onClick={() => {
+              onBrandSelect && onBrandSelect('all');
+            }}
             sx={{
               borderRadius: 1,
               mb: 0.5,
@@ -73,17 +76,28 @@ const Sidebar = ({ brands, categories, selectedBrand, selectedSubCategory, setSe
             <ListItemText primary="Tüm Ürünler" />
           </ListItemButton>
         </ListItem>
-        {(brands || categories || []).map((brand) => (
+        {(categories || []).map((brand) => (
           <Box key={brand.id}>
             <ListItem disablePadding>
               <ListItemButton 
+                selected={selectedBrand === brand.id.toString()}
                 onClick={() => {
-                  handleClick(brand.id);
-                  // Ana kategoriye tıklandığında sadece alt kategorileri aç/kapat, ürün arama
+                  // Kategori seçimini yap
+                  onBrandSelect && onBrandSelect(brand.id);
+                  // Alt kategorileri aç
+                  if (!open[brand.id]) {
+                    handleClick(brand.id);
+                  }
                 }}
                 sx={{
                   borderRadius: 1,
                   mb: 0.5,
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.18)',
+                    }
+                  },
                   '&:hover': {
                     backgroundColor: 'rgba(25, 118, 210, 0.08)',
                   }
@@ -94,10 +108,19 @@ const Sidebar = ({ brands, categories, selectedBrand, selectedSubCategory, setSe
                   primary={brand.name}
                   primaryTypographyProps={{
                     fontWeight: 600,
-                    color: 'text.primary'
+                    color: selectedBrand === brand.id.toString() ? 'primary.main' : 'text.primary'
                   }}
                 />
-                {open[brand.id] ? <ExpandLess /> : <ExpandMore />}
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClick(brand.id);
+                  }}
+                  sx={{ ml: 'auto' }}
+                >
+                  {open[brand.id] ? <ExpandLess /> : <ExpandMore />}
+                </IconButton>
               </ListItemButton>
             </ListItem>
             <Collapse in={open[brand.id]} timeout="auto" unmountOnExit>
@@ -122,7 +145,9 @@ const Sidebar = ({ brands, categories, selectedBrand, selectedSubCategory, setSe
                               }
                             }
                           }}
-                          onClick={() => setSelectedSubCategory(brand.id, subName)}
+                          onClick={() => {
+                            onSubCategorySelect && onSubCategorySelect(brand.id, subName);
+                          }}
                           selected={selectedBrand === brand.id.toString() && selectedSubCategory === subName}
                         >
                           <ListItemText primary={subName} />

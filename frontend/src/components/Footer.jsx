@@ -197,7 +197,7 @@ const Footer = () => {
                   lineHeight: 1.5,
                   opacity: 0.9
                 }}>
-                  Yeniyurt, Ayyıldız Cd. No:32,<br />
+                  Yeniyurt, Ayyıldız Cd. No:22,<br />
                   60030 Tokat Merkez
                 </Typography>
               </Box>
